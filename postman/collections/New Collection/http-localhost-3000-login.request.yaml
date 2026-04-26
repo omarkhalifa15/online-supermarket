@@ -1,0 +1,18 @@
+$kind: http-request
+name: http://localhost:3000/login
+url: http://localhost:3000/login
+method: GET
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{\r
+
+    \    \"email\" : \"adam@example.com\",\r
+
+    \    \"password\" : \"123456\"\r
+
+    }"
+auth:
+  type: apikey
+order: 1777209533996
