@@ -12,12 +12,20 @@ const Login = ({ onLogin, onSwitchToSignup }) => {
     setError('');
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/login`, {
-        email: e.target.email.value,
-        password: e.target.password.value
-      });
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/login`, // matches app.use('', authRoutes) → /login
+        {
+          email: e.target.email.value,
+          password: e.target.password.value,
+        }
+      );
 
-      onLogin(response.data); // Pass user data from API
+      // Save token so checkout/history/profile-update calls work
+      localStorage.setItem('token', response.data.token);
+
+      // Pass only the user object { id, name, email, phone, address }
+      onLogin(response.data.user);
+
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {
@@ -29,16 +37,16 @@ const Login = ({ onLogin, onSwitchToSignup }) => {
     <div className="container">
       <div className="logo">Uni Market</div>
       <div className="subtitle">Welcome back</div>
-      
-      {error && <div style={{color: '#dc3545', marginBottom: '15px'}}>{error}</div>}
-      
+
+      {error && <div style={{ color: '#dc3545', marginBottom: '15px' }}>{error}</div>}
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label className="label">Email</label>
-          <input 
-            type="email" 
-            name="email" 
-            className="input" 
+          <input
+            type="email"
+            name="email"
+            className="input"
             placeholder="Enter your email"
             required
             disabled={loading}
@@ -47,10 +55,10 @@ const Login = ({ onLogin, onSwitchToSignup }) => {
 
         <div className="form-group">
           <label className="label">Password</label>
-          <input 
-            type="password" 
-            name="password" 
-            className="input" 
+          <input
+            type="password"
+            name="password"
+            className="input"
             placeholder="Enter your password"
             required
             disabled={loading}

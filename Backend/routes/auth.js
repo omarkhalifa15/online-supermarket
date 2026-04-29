@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../Config/db');
 require('dotenv').config({ path: '../.env' });
 
-// REGISTER
+// ── POST /auth/register ───────────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   const { name, email, password, phone, age, address } = req.body;
 
@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// LOGIN
+// ── POST /auth/login ──────────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -56,10 +56,51 @@ router.post('/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
-      user: { id: user.id, name: user.name, email: user.email }
+      // Return ALL profile fields so the frontend can display them
+      user: {
+        id:      user.id,
+        name:    user.name,
+        email:   user.email,
+        phone:   user.phone   || '',
+        address: user.address || '',
+        age:     user.age     || '',
+      },
     });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── PUT /auth/update ──────────────────────────────────────────────────────────
+// Update profile fields (name, email, phone, address)
+// Body: { user_id, name, email, phone, address }
+router.put('/update', async (req, res) => {
+  const { user_id, name, email, phone, address } = req.body;
+
+  if (!user_id || !name || !email)
+    return res.status(400).json({ message: 'user_id, name and email are required' });
+
+  try {
+    // Make sure the new email isn't taken by someone else
+    const [conflict] = await db.query(
+      'SELECT id FROM users WHERE email = ? AND id != ?',
+      [email, user_id]
+    );
+    if (conflict.length > 0)
+      return res.status(400).json({ message: 'Email is already in use by another account' });
+
+    await db.query(
+      'UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
+      [name, email, phone || null, address || null, user_id]
+    );
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: { id: user_id, name, email, phone: phone || '', address: address || '' },
+    });
+  } catch (err) {
+    console.error('[PUT /auth/update]', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
