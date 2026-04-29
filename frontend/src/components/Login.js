@@ -13,17 +13,14 @@ const Login = ({ onLogin, onSwitchToSignup }) => {
 
     try {
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/login`, // matches app.use('', authRoutes) → /login
+        `${process.env.REACT_APP_API_URL}/auth/login`, // UPDATED: added /auth
         {
           email: e.target.email.value,
           password: e.target.password.value,
         }
       );
 
-      // Save token so checkout/history/profile-update calls work
       localStorage.setItem('token', response.data.token);
-
-      // Pass only the user object { id, name, email, phone, address }
       onLogin(response.data.user);
 
     } catch (err) {
@@ -71,7 +68,7 @@ const Login = ({ onLogin, onSwitchToSignup }) => {
       </form>
 
       <p className="new-user-text">
-        New? <span className="link" onClick={onSwitchToSignup}>Register here</span>
+        New here? <span className="link" onClick={onSwitchToSignup}>Create account</span>
       </p>
     </div>
   );

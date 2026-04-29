@@ -13,7 +13,7 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
     setError('');
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/register`, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/register`, { // UPDATED: added /auth
         name: e.target.name.value,
         email: e.target.email.value,
         password: e.target.password.value,
@@ -22,7 +22,7 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
         age: parseInt(e.target.age.value)
       });
 
-      onSignup(response.data); // Pass user data from API
+      onSignup(response.data); 
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
     } finally {
@@ -36,46 +36,32 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
       <div className="subtitle">Create your account</div>
       
       {error && <div style={{color: '#dc3545', marginBottom: '15px'}}>{error}</div>}
-      
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label className="label">Full Name</label>
-          <input 
-            type="text" 
-            name="name" 
-            className="input" 
-            placeholder="Enter your full name"
-            required
-            disabled={loading}
-          />
+          <input type="text" name="name" className="input" placeholder="Your name" required disabled={loading} />
         </div>
 
         <div className="form-group">
-          <label className="label">Email</label>
-          <input 
-            type="email" 
-            name="email" 
-            className="input" 
-            placeholder="Enter your email"
-            required
-            disabled={loading}
-          />
+          <label className="label">Email Address</label>
+          <input type="email" name="email" className="input" placeholder="email@example.com" required disabled={loading} />
         </div>
 
         <div className="form-group">
           <label className="label">Password</label>
-          <div className="password-container">
+          <div style={{position: 'relative'}}>
             <input 
-              type={showPassword ? 'text' : 'password'} 
+              type={showPassword ? "text" : "password"} 
               name="password" 
               className="input" 
-              placeholder="Create a password"
-              required
+              placeholder="Min. 6 characters" 
+              required 
               disabled={loading}
             />
             <span 
-              className="password-toggle"
-              onClick={() => !loading && setShowPassword(!showPassword)}
+              style={{position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer'}}
+              onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? '🙈' : '👁️'}
             </span>
@@ -84,40 +70,17 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
 
         <div className="form-group">
           <label className="label">Address</label>
-          <input 
-            type="text" 
-            name="address" 
-            className="input" 
-            placeholder="Your full address"
-            required
-            disabled={loading}
-          />
+          <input type="text" name="address" className="input" placeholder="Your full address" required disabled={loading} />
         </div>
 
         <div className="form-group">
           <label className="label">Phone Number</label>
-          <input 
-            type="tel" 
-            name="phone" 
-            className="input" 
-            placeholder="Your phone number"
-            required
-            disabled={loading}
-          />
+          <input type="tel" name="phone" className="input" placeholder="Your phone number" required disabled={loading} />
         </div>
 
         <div className="form-group">
           <label className="label">Age</label>
-          <input 
-            type="number" 
-            name="age" 
-            className="input" 
-            placeholder="Your age"
-            min="13"
-            max="120"
-            required
-            disabled={loading}
-          />
+          <input type="number" name="age" className="input" placeholder="Your age" min="13" max="120" required disabled={loading} />
         </div>
 
         <button type="submit" className="btn" disabled={loading}>
@@ -126,7 +89,7 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
       </form>
 
       <p className="new-user-text">
-        Already have an account? <span className="link" onClick={() => !loading && onSwitchToLogin()}>Sign in</span>
+        Already have an account? <span className="link" onClick={() => !loading && onSwitchToLogin()}>Sign In</span>
       </p>
     </div>
   );

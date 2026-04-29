@@ -56,7 +56,6 @@ router.post('/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
-      // Return ALL profile fields so the frontend can display them
       user: {
         id:      user.id,
         name:    user.name,
@@ -73,8 +72,6 @@ router.post('/login', async (req, res) => {
 });
 
 // ── PUT /auth/update ──────────────────────────────────────────────────────────
-// Update profile fields (name, email, phone, address)
-// Body: { user_id, name, email, phone, address }
 router.put('/update', async (req, res) => {
   const { user_id, name, email, phone, address } = req.body;
 
@@ -82,13 +79,12 @@ router.put('/update', async (req, res) => {
     return res.status(400).json({ message: 'user_id, name and email are required' });
 
   try {
-    // Make sure the new email isn't taken by someone else
     const [conflict] = await db.query(
       'SELECT id FROM users WHERE email = ? AND id != ?',
       [email, user_id]
     );
     if (conflict.length > 0)
-      return res.status(400).json({ message: 'Email is already in use by another account' });
+      return res.status(400).json({ message: 'Email is already in use' });
 
     await db.query(
       'UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
@@ -103,6 +99,35 @@ router.put('/update', async (req, res) => {
     console.error('[PUT /auth/update]', err);
     res.status(500).json({ message: 'Server error' });
   }
+});
+
+// ── POST /auth/verify-password ───────────────────────────────────────────────
+router.post('/verify-password', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    try {
+        // Query database using the pool connection
+        const [users] = await db.query('SELECT password FROM users WHERE email = ?', [email]);
+        
+        if (users.length === 0) {
+            return res.status(404).json({ message: "User session expired or not found" });
+        }
+
+        const isMatch = await bcrypt.compare(password, users[0].password);
+        
+        if (isMatch) {
+            return res.status(200).json({ success: true, message: "Verified" });
+        } else {
+            return res.status(401).json({ message: "Incorrect password" });
+        }
+    } catch (error) {
+        console.error('[Verify Password Error]:', error);
+        res.status(500).json({ message: "Server error" });
+    }
 });
 
 module.exports = router;
