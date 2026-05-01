@@ -77,12 +77,10 @@ router.post('/purchase/batch', async (req, res) => {
   if (!user_id || !Array.isArray(items) || items.length === 0)
     return res.status(400).json({ error: 'user_id and a non-empty items array are required' });
 
-  for (const item of items) {
-    if (!item.product_id || !item.quantity || item.quantity < 1)
-      return res.status(400).json({ error: 'Each item must have product_id and quantity ≥ 1' });
-  }
+  const orderId = `ORD-${Date.now()}-${user_id}`;
 
   const conn = await db.getConnection();
+
   try {
     await conn.beginTransaction();
 
@@ -91,19 +89,28 @@ router.post('/purchase/batch', async (req, res) => {
         'SELECT id, price FROM products WHERE id = ?',
         [item.product_id]
       );
+
       if (products.length === 0) {
         await conn.rollback();
         return res.status(404).json({ error: `Product ${item.product_id} not found` });
       }
 
       await conn.query(
-        `INSERT INTO history (user_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)`,
-        [user_id, item.product_id, item.quantity, products[0].price]
+        `INSERT INTO history 
+         (user_id, order_id, product_id, quantity, price_at_purchase) 
+         VALUES (?, ?, ?, ?, ?)`,
+        [user_id, orderId, item.product_id, item.quantity, products[0].price]
       );
     }
 
     await conn.commit();
-    res.json({ message: 'Order placed successfully', count: items.length });
+
+    res.json({
+      message: 'Order placed successfully',
+      order_id: orderId,
+      count: items.length
+    });
+
   } catch (err) {
     await conn.rollback();
     console.error('[POST /purchase/batch]', err);
@@ -116,6 +123,7 @@ router.post('/purchase/batch', async (req, res) => {
 // ── GET /shop/history ────────────────────────────────────────────────────────
 router.get('/history', async (req, res) => {
   const { user_id } = req.query;
+
   if (!user_id)
     return res.status(400).json({ error: 'user_id query param is required' });
 
@@ -123,8 +131,9 @@ router.get('/history', async (req, res) => {
     const [results] = await db.query(
       `SELECT
          h.id,
-         p.id          AS product_id,
-         p.name        AS product_name,
+         h.order_id,
+         p.id AS product_id,
+         p.name AS product_name,
          p.image_url,
          p.category,
          h.quantity,
@@ -136,6 +145,7 @@ router.get('/history', async (req, res) => {
        ORDER BY h.purchased_at DESC`,
       [user_id]
     );
+
     res.json(results);
   } catch (err) {
     console.error('[GET /history]', err);
