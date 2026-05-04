@@ -22,7 +22,7 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
     setError('');
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/register`, {
+      await axios.post(`${process.env.REACT_APP_API_URL}/auth/register`, {
         name: e.target.name.value,
         email: e.target.email.value,
         password: e.target.password.value,

@@ -50,7 +50,7 @@ export default function Home({ userData, setUserData, onLogout }) {
     }, 300);
 
     return () => clearTimeout(searchTimeout.current);
-  }, [category, search]);
+  }, [category, search, fetchProducts]);
 
   useEffect(() => {
     fetchCategories();

@@ -178,8 +178,8 @@ export default function Profile({
     />
   </div>
 
-  <button className="market-primary-btn" onClick={saveEdit}>
-    Save Changes
+  <button className="market-primary-btn" onClick={saveEdit} disabled={editLoading}>
+    {editLoading ? 'Saving...' : 'Save Changes'}
   </button>
 
   <button className="market-secondary-btn" onClick={() => setEditMode(false)}>
