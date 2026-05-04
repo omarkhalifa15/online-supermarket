@@ -89,6 +89,14 @@ body {
   color: #9ca8ff;
 }
 
+.brand-logo img,
+.market-brand img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
 .brand-side h1 {
   font-size: 4rem;
   line-height: 1.05;
@@ -368,6 +376,17 @@ input[type="number"] {
   width: 100%;
   max-width: 680px;
   margin: 0 auto;
+}
+
+.profile-btn {
+  padding: 0;
+}
+
+.profile-logo-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .search-box {
@@ -660,10 +679,6 @@ input[type="number"] {
   gap: 14px;
   padding: 16px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.cart-emoji {
-  font-size: 2rem;
 }
 
 .cart-info {

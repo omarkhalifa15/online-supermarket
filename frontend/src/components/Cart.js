@@ -1,15 +1,20 @@
 import React from 'react';
 import axios from 'axios';
-import { FiX, FiPlus, FiMinus, FiTrash2 } from 'react-icons/fi';
 
-export default function Cart({ open, onClose, cart, setCart, userData, API, getCategoryEmoji }) {
+export default function Cart({ open, onClose, cart, setCart, userData, API, getCategoryEmoji, onCheckoutSuccess, cartMessage, setCartMessage }) {
   if (!open) return null;
 
   const updateQty = (id, delta) => {
     setCart((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i
-      )
+      prev.map((i) => {
+        if (i.id !== id) return i;
+        const targetQty = i.qty + delta;
+        const maxQty = i.stock || Infinity;
+        return {
+          ...i,
+          qty: Math.max(1, Math.min(maxQty, targetQty))
+        };
+      })
     );
   };
 
@@ -41,11 +46,15 @@ export default function Cart({ open, onClose, cart, setCart, userData, API, getC
         }
       );
 
-      alert('Order placed successfully!');
       setCart([]);
-      onClose();
+      setCartMessage?.({ text: 'Order placed successfully', type: 'success' });
+      onCheckoutSuccess?.();
     } catch (err) {
-      alert('Checkout failed.');
+      const serverMessage = err.response?.data?.error;
+      const message = serverMessage?.toLowerCase().includes('stock')
+        ? 'An item appears to be out of stock'
+        : 'Checkout failed.';
+      setCartMessage?.({ text: message, type: 'error' });
     }
   };
 
@@ -56,36 +65,42 @@ export default function Cart({ open, onClose, cart, setCart, userData, API, getC
       <div className="market-panel">
         <div className="panel-header">
           <h2>Your Cart</h2>
-          <button className="icon-btn" onClick={onClose}>
-            <FiX />
+          <button className="icon-btn" onClick={() => {
+            setCartMessage?.({ text: '', type: '' });
+            onClose();
+          }}>
+            Close
           </button>
         </div>
 
         <div className="panel-body">
+          {cartMessage?.text && (
+            <div className={cartMessage.type === 'success' ? 'panel-success' : 'panel-error'}>
+              {cartMessage.text}
+            </div>
+          )}
           {cart.length === 0 ? (
             <p className="empty-text">Your cart is empty.</p>
           ) : (
             cart.map((item) => (
               <div key={item.id} className="cart-item">
-                <div className="cart-emoji">{getCategoryEmoji(item.category)}</div>
-
                 <div className="cart-info">
                   <h4>{item.name}</h4>
                   <p>EGP {(item.price * item.qty).toFixed(2)}</p>
 
                   <div className="qty-row">
-                    <button onClick={() => updateQty(item.id, -1)}>
-                      <FiMinus />
-                    </button>
+                    <button onClick={() => updateQty(item.id, -1)}>-</button>
                     <span>{item.qty}</span>
-                    <button onClick={() => updateQty(item.id, 1)}>
-                      <FiPlus />
+                    <button
+                      onClick={() => updateQty(item.id, 1)}
+                      disabled={item.stock !== undefined && item.qty >= item.stock}
+                    >+
                     </button>
                   </div>
                 </div>
 
                 <button className="delete-btn" onClick={() => removeFromCart(item.id)}>
-                  <FiTrash2 />
+                  Remove
                 </button>
               </div>
             ))

@@ -1,24 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import Home from './components/Home';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState(() => {
-    // If we have saved user data, go straight to home
-    return localStorage.getItem('userData') ? 'home' : 'login';
-  });
+  const [currentPage, setCurrentPage] = useState('login');
+  const [userData, setUserData] = useState(null);
 
-  const [userData, setUserData] = useState(() => {
-    // Restore user from localStorage so refresh doesn't lose the session
-    try {
-      const saved = localStorage.getItem('userData');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  useEffect(() => {
+    localStorage.removeItem('userData');
+    localStorage.removeItem('token');
+  }, []);
 
   const handleLogin = (data) => {
     // data = { id, name, email } returned by the backend login route

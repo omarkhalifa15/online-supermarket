@@ -6,7 +6,7 @@ const db      = require('../Config/db');
 router.get('/products', async (req, res) => {
   const { search, category } = req.query;
 
-  let query = `SELECT id, name, category, price, image_url FROM products WHERE 1=1`;
+  let query = `SELECT id, name, category, price, image_url, stock FROM products WHERE 1=1`;
   const params = [];
 
   if (search && search.trim()) {
@@ -32,7 +32,7 @@ router.get('/products', async (req, res) => {
 router.get('/products/:id', async (req, res) => {
   try {
     const [results] = await db.query(
-      'SELECT id, name, category, price, image_url FROM products WHERE id = ?',
+      'SELECT id, name, category, price, image_url, stock FROM products WHERE id = ?',
       [req.params.id]
     );
     if (results.length === 0)
@@ -53,13 +53,18 @@ router.post('/purchase', async (req, res) => {
     return res.status(400).json({ error: 'user_id, product_id and quantity (≥1) are required' });
 
   try {
-    const [products] = await db.query('SELECT id, price FROM products WHERE id = ?', [product_id]);
+    const [products] = await db.query('SELECT id, price, stock FROM products WHERE id = ?', [product_id]);
     if (products.length === 0)
       return res.status(404).json({ error: 'Product not found' });
 
+    const product = products[0];
+    if (product.stock < quantity)
+      return res.status(400).json({ error: 'Not enough stock available' });
+
+    await db.query('UPDATE products SET stock = stock - ? WHERE id = ?', [quantity, product_id]);
     await db.query(
       `INSERT INTO history (user_id, product_id, quantity, price_at_purchase) VALUES (?, ?, ?, ?)`,
-      [user_id, product_id, quantity, products[0].price]
+      [user_id, product_id, quantity, product.price]
     );
     res.json({ message: 'Purchase recorded successfully' });
   } catch (err) {
@@ -86,7 +91,7 @@ router.post('/purchase/batch', async (req, res) => {
 
     for (const item of items) {
       const [products] = await conn.query(
-        'SELECT id, price FROM products WHERE id = ?',
+        'SELECT id, price, stock FROM products WHERE id = ? FOR UPDATE',
         [item.product_id]
       );
 
@@ -95,11 +100,22 @@ router.post('/purchase/batch', async (req, res) => {
         return res.status(404).json({ error: `Product ${item.product_id} not found` });
       }
 
+      const product = products[0];
+      if (product.stock < item.quantity) {
+        await conn.rollback();
+        return res.status(400).json({ error: `Not enough stock for product ${item.product_id}` });
+      }
+
+      await conn.query(
+        'UPDATE products SET stock = stock - ? WHERE id = ?',
+        [item.quantity, item.product_id]
+      );
+
       await conn.query(
         `INSERT INTO history 
          (user_id, order_id, product_id, quantity, price_at_purchase) 
          VALUES (?, ?, ?, ?, ?)`,
-        [user_id, orderId, item.product_id, item.quantity, products[0].price]
+        [user_id, orderId, item.product_id, item.quantity, product.price]
       );
     }
 
