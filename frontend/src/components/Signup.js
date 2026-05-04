@@ -7,8 +7,7 @@ import {
   FiPhone,
   FiCalendar,
   FiEye,
-  FiEyeOff,
-  FiShoppingCart
+  FiEyeOff
 } from 'react-icons/fi';
 import axios from 'axios';
 
@@ -46,8 +45,8 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
       {/* Header */}
       <div className="login-header">
         <div className="brand-logo">
-          <FiShoppingCart />
-          <span>Uni Market</span>
+          <img src="/images/Logo.png" alt="Fresh Mart" className="brand-logo-img" />
+          <span>Fresh Mart</span>
         </div>
 
         <h1>Create Account</h1>
