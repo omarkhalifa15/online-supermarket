@@ -25,7 +25,10 @@ export default function Cart({ open, onClose, cart, setCart, userData, API, getC
   const cartTotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
 
   const checkout = async () => {
-    if (!userData?.id) return alert('Please login.');
+    if (!userData?.id) {
+      setCartMessage?.({ text: 'Please sign in or sign up to complete purchase.', type: 'error' });
+      return;
+    }
 
     const token = localStorage.getItem('token');
 

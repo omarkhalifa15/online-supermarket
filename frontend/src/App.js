@@ -5,12 +5,14 @@ import Signup from './components/Signup';
 import Home from './components/Home';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [currentPage, setCurrentPage] = useState('home');
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
-    localStorage.removeItem('userData');
-    localStorage.removeItem('token');
+    const savedUser = localStorage.getItem('userData');
+    if (savedUser) {
+      setUserData(JSON.parse(savedUser));
+    }
   }, []);
 
   const handleLogin = (data) => {
@@ -30,27 +32,38 @@ function App() {
     setUserData(null);
     localStorage.removeItem('userData');
     localStorage.removeItem('token');
-    setCurrentPage('login');
+    setCurrentPage('home');
   };
 
   // Wrap setUserData so Home can update it and we keep localStorage in sync
   const handleSetUserData = (data) => {
     setUserData(data);
-    localStorage.setItem('userData', JSON.stringify(data));
+    if (data) {
+      localStorage.setItem('userData', JSON.stringify(data));
+    } else {
+      localStorage.removeItem('userData');
+      localStorage.removeItem('token');
+    }
   };
 
   return (
     <div className="App">
       {currentPage === 'login' && (
         <Login
-          onLogin={handleLogin}
+          onLogin={(data) => {
+            handleLogin(data);
+            setCurrentPage('home');
+          }}
           onSwitchToSignup={() => setCurrentPage('signup')}
         />
       )}
 
       {currentPage === 'signup' && (
         <Signup
-          onSignup={handleSignup}
+          onSignup={(data) => {
+            handleSignup(data);
+            setCurrentPage('home');
+          }}
           onSwitchToLogin={() => setCurrentPage('login')}
         />
       )}
@@ -60,6 +73,8 @@ function App() {
           userData={userData}
           setUserData={handleSetUserData}
           onLogout={handleLogout}
+          onSwitchToLogin={() => setCurrentPage('login')}
+          onSwitchToSignup={() => setCurrentPage('signup')}
         />
       )}
     </div>

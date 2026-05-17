@@ -426,25 +426,31 @@ input[type="number"] {
 .market-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .market-nav-btn {
   position: relative;
-  border: none;
-  border-radius: 14px;
-  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 12px 18px;
+  min-height: 48px;
   color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
   background: rgba(255, 255, 255, 0.08);
-  transition: 0.25s;
+  transition: 0.25s ease;
 }
 
 .market-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+.market-nav-btn svg {
+  display: inline-flex;
 }
 
 .cart-badge {
@@ -917,6 +923,27 @@ input[type="number"] {
   border: 1px solid rgba(40, 167, 69, 0.35);
   padding: 10px;
   border-radius: 12px;
+}
+
+.guest-signin-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.guest-signin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.guest-signin-actions .clear-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: white;
+  min-width: 100px;
 }
 
 @media (max-width: 900px) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { FiShoppingCart, FiUser, FiSearch, FiClock, FiPlus, FiCheck } from 'react-icons/fi';
 import Cart from './Cart';
@@ -20,7 +20,7 @@ const getCategoryEmoji = (cat) => {
   return map[cat] || '📦';
 };
 
-export default function Home({ userData, setUserData, onLogout }) {
+export default function Home({ userData, setUserData, onLogout, onSwitchToLogin, onSwitchToSignup }) {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [cartMessage, setCartMessage] = useState({ text: '', type: '' });
@@ -36,11 +36,45 @@ export default function Home({ userData, setUserData, onLogout }) {
   const [history, setHistory] = useState([]);
   const [addedIds, setAddedIds] = useState({});
   const [searchFocused, setSearchFocused] = useState(false);
+  const [guestSignInPromptOpen, setGuestSignInPromptOpen] = useState(false);
 
   const searchTimeout = useRef(null);
 
   const displayName = userData?.name?.trim() || userData?.email?.trim() || 'Guest';
   const avatarLetter = displayName !== 'Guest' ? displayName[0].toUpperCase() : '?';
+
+  useEffect(() => {
+    if (userData?.id) return;
+
+    setProfileOpen(false);
+    setHistoryOpen(false);
+    setHistory([]);
+  }, [userData?.id]);
+
+  const handleLogout = () => {
+    setProfileOpen(false);
+    setHistoryOpen(false);
+    setGuestSignInPromptOpen(false);
+    setHistory([]);
+    onLogout();
+  };
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const params = {};
+      if (search) params.search = search;
+      if (category) params.category = category;
+
+      const res = await axios.get(`${API}/shop/products`, { params });
+      setProducts(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [category, search]);
 
   useEffect(() => {
     clearTimeout(searchTimeout.current);
@@ -63,23 +97,6 @@ export default function Home({ userData, setUserData, onLogout }) {
     } catch (err) {
       console.error('Failed to load categories', err);
       setCategories([]);
-    }
-  };
-
-  const fetchProducts = async () => {
-    setLoading(true);
-
-    try {
-      const params = {};
-      if (search) params.search = search;
-      if (category) params.category = category;
-
-      const res = await axios.get(`${API}/shop/products`, { params });
-      setProducts(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -171,15 +188,30 @@ export default function Home({ userData, setUserData, onLogout }) {
         </div>
 
         <div className="market-actions">
+          {userData?.id && (
+            <button
+              className="market-nav-btn"
+              onClick={() => {
+                setHistoryOpen(true);
+                fetchHistory();
+              }}
+            >
+              <FiClock />
+              <span>History</span>
+            </button>
+          )}
+
           <button
-            className="market-nav-btn"
+            className="market-nav-btn profile-btn"
             onClick={() => {
-              setHistoryOpen(true);
-              fetchHistory();
+              if (userData?.id) {
+                setProfileOpen(true);
+              } else {
+                setGuestSignInPromptOpen(true);
+              }
             }}
           >
-            <FiClock />
-            <span>History</span>
+            <FiUser />
           </button>
 
           <button
@@ -189,10 +221,6 @@ export default function Home({ userData, setUserData, onLogout }) {
             <FiShoppingCart />
             <span>Cart</span>
             {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
-          </button>
-
-          <button className="market-nav-btn profile-btn" onClick={() => setProfileOpen(true)}>
-            <FiUser />
           </button>
         </div>
       </nav>
@@ -214,6 +242,32 @@ export default function Home({ userData, setUserData, onLogout }) {
             </button>
           ))}
         </div>
+
+        {guestSignInPromptOpen && !userData?.id && (
+          <>
+            <div className="market-overlay" onClick={() => setGuestSignInPromptOpen(false)} />
+            <div className="market-panel">
+              <div className="panel-header">
+                <h2>Guest Profile</h2>
+                <button className="icon-btn" onClick={() => setGuestSignInPromptOpen(false)}>
+                  Close
+                </button>
+              </div>
+              <div className="panel-body guest-panel-body">
+                <p>Sign in to access your profile and complete purchases.</p>
+                <button className="market-primary-btn" onClick={() => {
+                  onSwitchToLogin();
+                  setGuestSignInPromptOpen(false);
+                }}>
+                  Sign In
+                </button>
+                <button className="market-secondary-btn" onClick={() => setGuestSignInPromptOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
         {loading ? (
           <div className="loading-text">Loading products...</div>
@@ -293,7 +347,7 @@ export default function Home({ userData, setUserData, onLogout }) {
         onClose={() => setProfileOpen(false)}
         userData={userData}
         setUserData={setUserData}
-        onLogout={onLogout}
+        onLogout={handleLogout}
         API={API}
         avatarLetter={avatarLetter}
         displayName={displayName}
