@@ -1,9 +1,22 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { FiShoppingCart, FiUser, FiSearch, FiClock, FiPlus, FiCheck } from 'react-icons/fi';
+import {
+  FiArrowRight,
+  FiCheck,
+  FiClock,
+  FiGift,
+  FiGrid,
+  FiHelpCircle,
+  FiPlus,
+  FiSearch,
+  FiShoppingBag,
+  FiShoppingCart,
+  FiUser
+} from 'react-icons/fi';
 import Cart from './Cart';
 import History from './History';
 import Profile from './Profile';
+import SupportPanel from './SupportPanel';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -20,6 +33,33 @@ const getCategoryEmoji = (cat) => {
   return map[cat] || '📦';
 };
 
+const heroProducts = [
+  { src: '/images/products/strawberry.jpg', label: 'Strawberries' },
+  { src: '/images/products/banana.jpg', label: 'Bananas' },
+  { src: '/images/products/Carrot.jpg', label: 'Carrots' },
+  { src: '/images/products/Red Bull Energy Drink, 250ml.jpeg', label: 'Energy drinks' }
+];
+
+const getProductDiscount = (product) => {
+  const discountMap = {
+    Fruits: 20,
+    Vegetables: 15,
+    Dairy: 10,
+    Beverages: 12,
+    Snacks: 18,
+    Bakery: 10,
+    Meat: 8
+  };
+
+  return discountMap[product?.category] || 10;
+};
+
+const getDiscountedPrice = (product) => {
+  const price = Number(product.price);
+  const discount = getProductDiscount(product);
+  return price - (price * discount / 100);
+};
+
 export default function Home({ userData, setUserData, onLogout, onSwitchToLogin, onSwitchToSignup }) {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
@@ -32,6 +72,8 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
   const [cartOpen, setCartOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportOrderContext, setSupportOrderContext] = useState(null);
 
   const [history, setHistory] = useState([]);
   const [addedIds, setAddedIds] = useState({});
@@ -42,6 +84,8 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
 
   const displayName = userData?.name?.trim() || userData?.email?.trim() || 'Guest';
   const avatarLetter = displayName !== 'Guest' ? displayName[0].toUpperCase() : '?';
+  const visibleProductCount = products.length;
+  const aisleCount = categories.length || new Set(products.map((p) => p.category)).size;
 
   useEffect(() => {
     if (userData?.id) return;
@@ -55,8 +99,17 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
     setProfileOpen(false);
     setHistoryOpen(false);
     setGuestSignInPromptOpen(false);
+    setSupportOpen(false);
+    setSupportOrderContext(null);
     setHistory([]);
     onLogout();
+  };
+
+  const openSupport = (order = null) => {
+    setSupportOrderContext(order);
+    setHistoryOpen(false);
+    setGuestSignInPromptOpen(false);
+    setSupportOpen(true);
   };
 
   const fetchProducts = useCallback(async () => {
@@ -115,6 +168,15 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
   };
 
   const addToCart = (product) => {
+    const discountedPrice = getDiscountedPrice(product);
+    const discount = getProductDiscount(product);
+    const productForCart = {
+      ...product,
+      original_price: Number(product.price),
+      price: discountedPrice,
+      discount
+    };
+
     setCart((prev) => {
       const existing = prev.find((i) => i.id === product.id);
       const currentQty = existing?.qty || 0;
@@ -128,7 +190,7 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
         );
       }
 
-      return [...prev, { ...product, qty: 1, stock: maxStock }];
+      return [...prev, { ...productForCart, qty: 1, stock: maxStock }];
     });
 
     setAddedIds((prev) => ({ ...prev, [product.id]: true }));
@@ -141,10 +203,18 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
   const reorderItems = (items) => {
     const cartItems = items.map((item) => {
       const product = products.find((p) => p.id === item.product_id);
+      const originalPrice = Number(product?.price ?? item.original_price ?? item.price);
+      const discount = getProductDiscount({ category: item.category });
+      const discountedPrice = product
+        ? getDiscountedPrice(product)
+        : originalPrice;
+
       return {
         id: item.product_id,
         name: item.product_name,
-        price: Number(item.price),
+        original_price: product ? originalPrice : undefined,
+        price: discountedPrice,
+        discount: product ? discount : undefined,
         category: item.category,
         image_url: item.image_url,
         qty: item.quantity,
@@ -170,7 +240,7 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
       <nav className="market-navbar">
         <span className="market-brand">
           <img src="/images/Logo.png" alt="Fresh Mart" className="brand-logo-img" />
-          Fresh Mart
+          <span>Fresh Mart</span>
         </span>
 
         <div className="market-search">
@@ -202,6 +272,14 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
           )}
 
           <button
+            className="market-nav-btn"
+            onClick={() => openSupport()}
+          >
+            <FiHelpCircle />
+            <span>Help</span>
+          </button>
+
+          <button
             className="market-nav-btn profile-btn"
             onClick={() => {
               if (userData?.id) {
@@ -227,99 +305,201 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
 
       <main className="market-page">
         <section className="market-hero">
-          <h1>Fresh groceries, smarter shopping</h1>
-          <p>Browse products, add to cart, and manage your orders easily.</p>
-        </section>
+          <div className="hero-copy">
+            <span className="hero-kicker">
+              <FiShoppingBag />
+              {userData?.id ? `Welcome, ${displayName}` : 'Guest market access'}
+            </span>
+            <h1>Fresh Mart</h1>
+            <p>Colorful daily groceries, crisp essentials, and quick cart building in one lively market board.</p>
 
-        <div className="pill-bar">
-          {['All', ...categories].map((c) => (
-            <button
-              key={c}
-              className={`pill ${((c === 'All' ? '' : c) === category) ? 'active' : ''}`}
-              onClick={() => setCategory(c === 'All' ? '' : c)}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
+            <div className="hero-discounts">
+              <button className="discount-card" onClick={() => setCategory('Fruits')}>
+                <FiGift />
+                <span>
+                  <strong>20% OFF</strong>
+                  <small>Fresh fruits today</small>
+                </span>
+                <FiArrowRight />
+              </button>
+              <button className="discount-card" onClick={() => setCategory('Vegetables')}>
+                <FiGift />
+                <span>
+                  <strong>15% OFF</strong>
+                  <small>Vegetable picks</small>
+                </span>
+                <FiArrowRight />
+              </button>
+              <button className="discount-card" onClick={() => setCategory('Snacks')}>
+                <FiGift />
+                <span>
+                  <strong>18% OFF</strong>
+                  <small>Snack deals</small>
+                </span>
+                <FiArrowRight />
+              </button>
+            </div>
 
-        {guestSignInPromptOpen && !userData?.id && (
-          <>
-            <div className="market-overlay" onClick={() => setGuestSignInPromptOpen(false)} />
-            <div className="market-panel">
-              <div className="panel-header">
-                <h2>Guest Profile</h2>
-                <button className="icon-btn" onClick={() => setGuestSignInPromptOpen(false)}>
-                  Close
-                </button>
+            <div className="hero-metrics">
+              <div>
+                <strong>{visibleProductCount}</strong>
+                <span>Products</span>
               </div>
-              <div className="panel-body guest-panel-body">
-                <p>Sign in to access your profile and complete purchases.</p>
-                <button className="market-primary-btn" onClick={() => {
-                  onSwitchToLogin();
-                  setGuestSignInPromptOpen(false);
-                }}>
-                  Sign In
-                </button>
-                <button className="market-secondary-btn" onClick={() => setGuestSignInPromptOpen(false)}>
-                  Cancel
-                </button>
+              <div>
+                <strong>{aisleCount}</strong>
+                <span>Aisles</span>
+              </div>
+              <div>
+                <strong>{cartCount}</strong>
+                <span>In Cart</span>
               </div>
             </div>
-          </>
-        )}
+          </div>
 
-        {loading ? (
-          <div className="loading-text">Loading products...</div>
-        ) : products.length === 0 ? (
-          <div className="empty-text">No items found.</div>
-        ) : (
-          <div className="product-grid">
-            {products.map((p) => {
-              const cartQty = cart.find((item) => item.id === p.id)?.qty || 0;
-              const addDisabled = p.stock <= 0 || cartQty >= p.stock;
-              return (
-                <div key={p.id} className="product-card">
-                  <div className="product-img-box">
-                    <img
-                      src={p.image_url}
-                      alt={p.name}
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement.classList.add('image-error');
-                      }}
-                    />
-                    <span>{getCategoryEmoji(p.category)}</span>
-                  </div>
+          <div className="hero-showcase" aria-hidden="true">
+            <div className="hero-ribbon">
+              <FiGrid />
+              Market Picks
+            </div>
+            {heroProducts.map((item, index) => (
+              <div className={`hero-product hero-product-${index + 1}`} key={item.src}>
+                <img src={item.src} alt="" />
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
 
-                  <div className="product-body">
-                    <span className="product-cat">{p.category}</span>
-                    <span className="product-name">{p.name}</span>
-                    <span className="product-price">EGP {Number(p.price).toFixed(2)}</span>
-                    <div className="product-stock">
-                      {p.stock <= 0 ? 'Out of stock' : `In stock: ${p.stock}`}
-                    </div>
-                  </div>
+        <section className="market-content">
+          <div className="section-heading">
+            <div>
+              <span className="section-kicker">Shop by aisle</span>
+              <h2>Market Board</h2>
+            </div>
+            <span className="section-count">{visibleProductCount} items</span>
+          </div>
 
-                  <button
-                    className={`add-btn ${addedIds[p.id] ? 'added' : ''}`}
-                    onClick={() => addToCart(p)}
-                    disabled={addDisabled}
-                  >
-                    {p.stock <= 0
-                      ? 'Out of stock'
-                      : cartQty >= p.stock
-                        ? 'Max added'
-                        : addedIds[p.id]
-                          ? <><FiCheck /> Added!</>
-                          : <><FiPlus /> Add to Cart</>}
+          <div className="pill-bar">
+            {['All', ...categories].map((c) => (
+              <button
+                key={c}
+                className={`pill ${((c === 'All' ? '' : c) === category) ? 'active' : ''}`}
+                onClick={() => setCategory(c === 'All' ? '' : c)}
+              >
+                <span className="pill-icon">{c === 'All' ? <FiGrid /> : getCategoryEmoji(c)}</span>
+                <span>{c}</span>
+              </button>
+            ))}
+          </div>
+
+          {guestSignInPromptOpen && !userData?.id && (
+            <>
+              <div className="market-overlay" onClick={() => setGuestSignInPromptOpen(false)} />
+              <div className="market-panel compact-panel">
+                <div className="panel-header">
+                  <h2>Guest Profile</h2>
+                  <button className="icon-btn" onClick={() => setGuestSignInPromptOpen(false)}>
+                    Close
                   </button>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <div className="panel-body guest-panel-body">
+                  <p>Sign in for profile details, checkout, and order history.</p>
+                  <button className="market-primary-btn" onClick={() => {
+                    onSwitchToLogin();
+                    setGuestSignInPromptOpen(false);
+                  }}>
+                    Sign In
+                  </button>
+                  <button className="market-secondary-btn" onClick={() => {
+                    onSwitchToSignup();
+                    setGuestSignInPromptOpen(false);
+                  }}>
+                    Create Account
+                  </button>
+                  <button className="market-quiet-btn" onClick={() => setGuestSignInPromptOpen(false)}>
+                    Keep Browsing
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {loading ? (
+            <div className="loading-text">
+              <span />
+              Loading products...
+            </div>
+          ) : products.length === 0 ? (
+            <div className="empty-text">No items found.</div>
+          ) : (
+            <div className="product-grid">
+              {products.map((p, index) => {
+                const cartQty = cart.find((item) => item.id === p.id)?.qty || 0;
+                const addDisabled = p.stock <= 0 || cartQty >= p.stock;
+                const stockLevel = Math.max(0, Math.min(100, ((p.stock || 0) / 30) * 100));
+                const discount = getProductDiscount(p);
+                const discountedPrice = getDiscountedPrice(p);
+
+                return (
+                  <div
+                    key={p.id}
+                    className={`product-card ${addedIds[p.id] ? 'is-added' : ''} ${p.stock <= 0 ? 'is-out' : ''}`}
+                    style={{ animationDelay: `${Math.min(index, 12) * 45}ms` }}
+                  >
+                    <div className="product-media">
+                      <img
+                        src={p.image_url}
+                        alt={p.name}
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement.classList.add('image-error');
+                        }}
+                      />
+                      <span className="product-fallback">{getCategoryEmoji(p.category)}</span>
+                      <span className="product-ribbon">{p.stock <= 0 ? 'Sold Out' : 'Fresh'}</span>
+                      <span className="discount-ribbon">-{discount}%</span>
+                    </div>
+
+                    <div className="product-body">
+                      <div className="product-meta">
+                        <span className="product-cat">{p.category}</span>
+                        <span className="product-stock">
+                          {p.stock <= 0 ? 'Out of stock' : `${p.stock} left`}
+                        </span>
+                      </div>
+                      <span className="product-name">{p.name}</span>
+
+                      <div className="stock-meter" aria-hidden="true">
+                        <span style={{ width: `${stockLevel}%` }} />
+                      </div>
+
+                      <div className="product-bottom">
+                        <span className="product-price">
+                          <small>EGP {Number(p.price).toFixed(2)}</small>
+                          EGP {discountedPrice.toFixed(2)}
+                        </span>
+                        <button
+                          className={`add-btn ${addedIds[p.id] ? 'added' : ''}`}
+                          onClick={() => addToCart(p)}
+                          disabled={addDisabled}
+                        >
+                          {p.stock <= 0
+                            ? 'Sold Out'
+                            : cartQty >= p.stock
+                              ? 'Max'
+                              : addedIds[p.id]
+                                ? <><FiCheck /> Added</>
+                                : <><FiPlus /> Add</>}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </main>
 
       <Cart
@@ -333,6 +513,8 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
         onCheckoutSuccess={fetchProducts}
         cartMessage={cartMessage}
         setCartMessage={setCartMessage}
+        onSwitchToLogin={onSwitchToLogin}
+        onSwitchToSignup={onSwitchToSignup}
       />
 
       <History
@@ -340,6 +522,8 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
   onClose={() => setHistoryOpen(false)}
   history={history}
   onReorder={reorderItems}
+  onNeedHelp={openSupport}
+  getCategoryEmoji={getCategoryEmoji}
 />
 
       <Profile
@@ -351,6 +535,17 @@ export default function Home({ userData, setUserData, onLogout, onSwitchToLogin,
         API={API}
         avatarLetter={avatarLetter}
         displayName={displayName}
+      />
+
+      <SupportPanel
+        open={supportOpen}
+        onClose={() => {
+          setSupportOpen(false);
+          setSupportOrderContext(null);
+        }}
+        API={API}
+        userData={userData}
+        orderContext={supportOrderContext}
       />
     </>
   );

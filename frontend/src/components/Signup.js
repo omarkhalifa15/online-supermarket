@@ -53,6 +53,12 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
         <p>Join and start shopping smarter</p>
       </div>
 
+      <div className="auth-showcase" aria-hidden="true">
+        <img src="/images/products/strawberry.jpg" alt="" />
+        <img src="/images/products/Cucumber.jpg" alt="" />
+        <img src="/images/products/Mega Chocolate Ice Cream.jpeg" alt="" />
+      </div>
+
       {/* Card */}
       <div className="login-card">
 

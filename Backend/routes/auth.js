@@ -73,10 +73,13 @@ router.post('/login', async (req, res) => {
 
 // ── PUT /auth/update ──────────────────────────────────────────────────────────
 router.put('/update', async (req, res) => {
-  const { user_id, name, email, phone, address } = req.body;
+  const { user_id, name, email, phone, address, password } = req.body;
 
   if (!user_id || !name || !email)
     return res.status(400).json({ message: 'user_id, name and email are required' });
+
+  if (password && password.length < 6)
+    return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
   try {
     const [conflict] = await db.query(
@@ -86,10 +89,18 @@ router.put('/update', async (req, res) => {
     if (conflict.length > 0)
       return res.status(400).json({ message: 'Email is already in use' });
 
-    await db.query(
-      'UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
-      [name, email, phone || null, address || null, user_id]
-    );
+    if (password) {
+      const hashed = await bcrypt.hash(password, 10);
+      await db.query(
+        'UPDATE users SET name = ?, email = ?, phone = ?, address = ?, password = ? WHERE id = ?',
+        [name, email, phone || null, address || null, hashed, user_id]
+      );
+    } else {
+      await db.query(
+        'UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
+        [name, email, phone || null, address || null, user_id]
+      );
+    }
 
     res.json({
       message: 'Profile updated successfully',

@@ -36,12 +36,32 @@ const createHistory = `
   CREATE TABLE IF NOT EXISTS history (
     id                INT AUTO_INCREMENT PRIMARY KEY,
     user_id           INT NOT NULL,
+    order_id          VARCHAR(80) NULL,
     product_id        INT NOT NULL,
     quantity          INT DEFAULT 1,
     price_at_purchase DECIMAL(10,2) NOT NULL,
+    shipping_address  TEXT NULL,
+    payment_method    VARCHAR(40) NULL,
+    payment_details   TEXT NULL,
     purchased_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id)    REFERENCES users(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
+  )`;
+
+const createSupportTickets = `
+  CREATE TABLE IF NOT EXISTS support_tickets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    order_id VARCHAR(80) NULL,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NULL,
+    issue_type VARCHAR(60) NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'Open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_support_status_created (status, created_at),
+    INDEX idx_support_order (order_id)
   )`;
 
       const createUsers = `
@@ -68,8 +88,12 @@ const createHistory = `
           connection.query(createHistory, (err) => {
             if (err) throw err;
             console.log('History table ready!');
-            console.log('All done! Database is ready for the supermarket project.');
-            connection.end();
+            connection.query(createSupportTickets, (err) => {
+              if (err) throw err;
+              console.log('Support tickets table ready!');
+              console.log('All done! Database is ready for the supermarket project.');
+              connection.end();
+            });
           });
         });
       });

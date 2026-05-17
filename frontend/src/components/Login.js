@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fi';
 import axios from 'axios';
 
-const Login = ({ onLogin, onSwitchToSignup }) => {
+const Login = ({ onLogin, onSwitchToSignup, onSwitchToAdmin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,6 +46,12 @@ const Login = ({ onLogin, onSwitchToSignup }) => {
 
       <h1>Welcome Back</h1>
       <p>Sign in to continue shopping</p>
+    </div>
+
+    <div className="auth-showcase" aria-hidden="true">
+      <img src="/images/products/red-apple.webp" alt="" />
+      <img src="/images/products/Carrot.jpg" alt="" />
+      <img src="/images/products/blueberry.jpg" alt="" />
     </div>
 
     <div className="login-card">
@@ -96,6 +102,13 @@ const Login = ({ onLogin, onSwitchToSignup }) => {
         New here?{' '}
         <span className="link" onClick={onSwitchToSignup}>
           Create account
+        </span>
+      </p>
+
+      <p className="new-user-text staff-link">
+        Staff member?{' '}
+        <span className="link" onClick={onSwitchToAdmin}>
+          Admin panel
         </span>
       </p>
     </div>

@@ -17,7 +17,9 @@ export default function Profile({
     name: '',
     email: '',
     phone: '',
-    address: ''
+    address: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
   const [editLoading, setEditLoading] = useState(false);
@@ -66,7 +68,9 @@ export default function Profile({
         name: userData?.name || '',
         email: userData?.email || '',
         phone: userData?.phone || '',
-        address: userData?.address || ''
+        address: userData?.address || '',
+        newPassword: '',
+        confirmPassword: ''
       });
 
       setEditMode(true);
@@ -82,15 +86,39 @@ export default function Profile({
     setEditError('');
     setEditSuccess('');
 
+    const wantsPasswordChange = editForm.newPassword || editForm.confirmPassword;
+
+    if (wantsPasswordChange) {
+      if (editForm.newPassword.length < 6) {
+        setEditError('New password must be at least 6 characters.');
+        setEditLoading(false);
+        return;
+      }
+
+      if (editForm.newPassword !== editForm.confirmPassword) {
+        setEditError('New password and confirm password do not match.');
+        setEditLoading(false);
+        return;
+      }
+    }
+
     try {
       const token = localStorage.getItem('token');
+      const payload = {
+        user_id: userData.id,
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        address: editForm.address
+      };
+
+      if (wantsPasswordChange) {
+        payload.password = editForm.newPassword;
+      }
 
       const res = await axios.put(
         `${API}/auth/update`,
-        {
-          user_id: userData.id,
-          ...editForm
-        },
+        payload,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -101,10 +129,10 @@ export default function Profile({
       setUserData(updated);
       localStorage.setItem('userData', JSON.stringify(updated));
 
-      setEditSuccess('Profile updated!');
+      setEditSuccess(wantsPasswordChange ? 'Profile and password updated!' : 'Profile updated!');
       setEditMode(false);
     } catch (err) {
-      setEditError('Failed to update profile.');
+      setEditError(err.response?.data?.message || 'Failed to update profile.');
     } finally {
       setEditLoading(false);
     }
@@ -176,6 +204,33 @@ export default function Profile({
       value={editForm.address}
       onChange={e => setEditForm({ ...editForm, address: e.target.value })}
     />
+  </div>
+
+  <div className="profile-password-group">
+    <div className="profile-password-heading">
+      <FiLock />
+      <span>Change Password</span>
+    </div>
+
+    <div className="form-field">
+      <label>New Password</label>
+      <input
+        type="password"
+        value={editForm.newPassword}
+        onChange={e => setEditForm({ ...editForm, newPassword: e.target.value })}
+        placeholder="Leave blank to keep current password"
+      />
+    </div>
+
+    <div className="form-field">
+      <label>Confirm New Password</label>
+      <input
+        type="password"
+        value={editForm.confirmPassword}
+        onChange={e => setEditForm({ ...editForm, confirmPassword: e.target.value })}
+        placeholder="Repeat new password"
+      />
+    </div>
   </div>
 
   <button className="market-primary-btn" onClick={saveEdit} disabled={editLoading}>

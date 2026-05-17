@@ -14,10 +14,14 @@ app.use(express.json());
 // ── Routes ───────────────────────────────────────────────────────────────────
 const authRoutes = require('./routes/auth');
 const shopRoutes = require('./routes/shopRoutes');
+const supportRoutes = require('./routes/supportRoutes');
+const adminRoutes = require('./routes/adminRoutes');
  
 // FIXED: Added '/auth' prefix to match frontend calls
 app.use('/auth', authRoutes);     
 app.use('/shop', shopRoutes);     
+app.use('/support', supportRoutes);
+app.use('/admin', adminRoutes);
  
 // ── 404 fallback ─────────────────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
