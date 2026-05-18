@@ -27,5 +27,9 @@ app.use('/admin', adminRoutes);
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
  
 // ── Start ─────────────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app;
