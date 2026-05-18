@@ -14,18 +14,16 @@ const ensureSupportTable = async () => {
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS support_tickets (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      user_id INT NULL,
-      order_id VARCHAR(80) NULL,
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      order_id VARCHAR(80),
       name VARCHAR(100) NOT NULL,
       email VARCHAR(150) NOT NULL,
-      phone VARCHAR(30) NULL,
+      phone VARCHAR(30),
       issue_type VARCHAR(60) NOT NULL,
       message TEXT NOT NULL,
       status VARCHAR(30) NOT NULL DEFAULT 'Open',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      INDEX idx_support_status_created (status, created_at),
-      INDEX idx_support_order (order_id)
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -42,6 +40,7 @@ const requireAdmin = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     if (decoded.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access only' });
     }
@@ -81,7 +80,7 @@ router.get('/tickets', requireAdmin, async (req, res) => {
   try {
     await ensureSupportTable();
 
-    const [tickets] = await db.query(
+    const result = await db.query(
       `SELECT
         id,
         user_id,
@@ -104,7 +103,7 @@ router.get('/tickets', requireAdmin, async (req, res) => {
         created_at DESC`
     );
 
-    res.json(tickets);
+    res.json(result.rows);
   } catch (err) {
     console.error('[GET /admin/tickets]', err);
     res.status(500).json({ message: 'Failed to fetch tickets' });
@@ -122,16 +121,19 @@ router.put('/tickets/:id/status', requireAdmin, async (req, res) => {
   try {
     await ensureSupportTable();
 
-    const [result] = await db.query(
-      'UPDATE support_tickets SET status = ? WHERE id = ?',
+    const result = await db.query(
+      'UPDATE support_tickets SET status = $1 WHERE id = $2 RETURNING id, status',
       [status, req.params.id]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
 
-    res.json({ message: 'Ticket status updated', ticket: { id: Number(req.params.id), status } });
+    res.json({
+      message: 'Ticket status updated',
+      ticket: result.rows[0]
+    });
   } catch (err) {
     console.error('[PUT /admin/tickets/:id/status]', err);
     res.status(500).json({ message: 'Failed to update ticket status' });
